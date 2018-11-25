@@ -113,5 +113,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# vscode config
-.vscode/
+# personal index file
+twitch-index.json
+
+# Data files
+dist/*

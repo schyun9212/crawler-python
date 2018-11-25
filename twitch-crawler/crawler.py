@@ -1,6 +1,8 @@
 import requests
 import os
 import json
+import sys
+import time
 
 class Crawler:
     def __init__(self, client_id, client_secret):
@@ -42,8 +44,12 @@ class Crawler:
     def Follows(self, users):
         follows = {}
         for user in users:
-            res = requests.get(self.base_url + '/users/' + user['_id'] + '/follows/channels?limit=100', headers = {'Client-ID' : self.client_id })
-            follow =  res.json()
+            follow = {'_total' : 1}
+            offset = 0
+            while (follow['_total'] - offset) > 0:
+                res = requests.get(self.base_url + '/users/' + user['_id'] + '/follows/channels?limit=100' + '&offset=' + str(offset), headers = self.headers)
+                follow.update(res.json())
+                offset += 100
             follows[user['display_name']] = follow
         return follows
 
@@ -89,23 +95,38 @@ class Crawler:
         return res.json()
 
 if __name__ == '__main__':
-    client_id = ''
-    client_secret = ''
+
+    try:
+        with open("twitch-index.json", encoding='utf-8') as f:
+            index = json.load(f)
+            client_id = index['client-ID']
+            targets = index['targets']
+            client_secret = ''
+    except:
+        print("No index file")
+        sys.exit(1)
 
     crawler = Crawler(client_id = client_id, client_secret = client_secret)
-    with open('data/targets.json', encoding='utf-8') as f:
+    with open(targets, encoding='utf-8') as f:
         targets = json.load(f)
-    users = crawler.Users(targets.values())
-    channels = crawler.Channel_by_ID(users)
-    follows = crawler.Follows(users)
-    teams = crawler.Teams(users)
-    videos = crawler.Videos(users)
-    top_game = crawler.Top_Game()
+    
+    output = {}
+    output['users'] = users = crawler.Users(targets.values())
+    output['channels'] = crawler.Channel_by_ID(users)
+    output['follows'] = crawler.Follows(users)
+    output['teams'] = crawler.Teams(users)
+    output['videos'] = crawler.Videos(users)
+    output['top_game'] = crawler.Top_Game()
+
+    out_dir = 'dist'
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    
+    t = time.strftime('%y%m%d%H%M')
+    with open(out_dir + '/' + t + '.json', 'w', encoding='utf-8') as f:
+        json.dump(output, f, ensure_ascii=False)
 
     ###################################################
     # TODO
     # Requests which needs oauth
     #subscribers = crawler.Subscribers(users)
-
-
-    print('a')
