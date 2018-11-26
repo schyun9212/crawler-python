@@ -1,8 +1,4 @@
 import requests
-import os
-import json
-import sys
-import time
 
 class Crawler:
     def __init__(self, client_id, client_secret):
@@ -86,47 +82,71 @@ class Crawler:
         streams = {}
         for user in users:
             res = requests.get(self.base_url + '/streams/' + user['_id'], headers = self.headers)
-            stream = res.json()['videos']
+            stream = res.json()['stream']
             streams[user['display_name']] = stream
         return streams
+    
+    def Live_Streams(self):
+        res = requests.get(self.base_url + '/streams/' + '?language=ko&limit=100', headers = self.headers)
+        return res.json()
     
     def Top_Game(self):
         res = requests.get(self.base_url + '/games/top', headers = self.headers)
         return res.json()
-
-if __name__ == '__main__':
-
-    try:
-        with open("twitch-index.json", encoding='utf-8') as f:
-            index = json.load(f)
-            client_id = index['client-ID']
-            targets = index['targets']
-            client_secret = ''
-    except:
-        print("No index file")
-        sys.exit(1)
-
-    crawler = Crawler(client_id = client_id, client_secret = client_secret)
-    with open(targets, encoding='utf-8') as f:
-        targets = json.load(f)
     
-    output = {}
-    output['users'] = users = crawler.Users(targets.values())
-    output['channels'] = crawler.Channel_by_ID(users)
-    output['follows'] = crawler.Follows(users)
-    output['teams'] = crawler.Teams(users)
-    output['videos'] = crawler.Videos(users)
-    output['top_game'] = crawler.Top_Game()
+    def Stream_Summary(self):
+        res = requests.get(self.base_url + '/streams/summary', headers = self.headers)
+        return res.json()
 
-    out_dir = 'dist'
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    
-    t = time.strftime('%y%m%d%H%M')
-    with open(out_dir + '/' + t + '.json', 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False)
+###########################################################################
+# How to use?
+#
+# Example
+#
+# try:
+#     with open(index_file, encoding='utf-8') as f:
+#         index = json.load(f)
+#         client_id = index['client-ID']
+#         targets = index['targets']
+#         client_secret = ''
+# except:
+#     print("No index file")
+#     sys.exit(1)
 
-    ###################################################
-    # TODO
-    # Requests which needs oauth
-    #subscribers = crawler.Subscribers(users)
+# ############################################################
+# # Get current time
+# t = time.strftime('%y%m%d%H%M')
+# new_day = int(t[-4:]) < 15 
+
+# crawler = Crawler(client_id = client_id, client_secret = client_secret)
+# with open(targets, encoding='utf-8') as f:
+#     targets = json.load(f)
+
+# output = {}
+# output['users'] = users = crawler.Users(targets.values())
+
+# #############################################################
+# # Collect data with 15 minute period
+# output['streams'] = crawler.Stream_by_User(users)
+# output['live_streams'] = crawler.Live_Streams()
+# output['top_game'] = crawler.Top_Game()
+# output['stream_summary'] = crawler.Stream_Summary()
+
+# #############################################################
+# # Collect data with 1 day period
+# if new_day :
+#     output['channels'] = crawler.Channel_by_ID(users)
+#     output['follows'] = crawler.Follows(users)
+#     output['teams'] = crawler.Teams(users)
+#     output['videos'] = crawler.Videos(users)
+
+# if not os.path.exists(out_dir):
+#     os.mkdir(out_dir)
+
+# with open(out_dir + '/' + t + '.json', 'w', encoding='utf-8') as f:
+#     json.dump(output, f, ensure_ascii=False)
+
+# ###################################################
+# # TODO
+# # Requests which needs oauth
+# #subscribers = crawler.Subscribers(users)
