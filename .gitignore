@@ -115,6 +115,7 @@ dmypy.json
 
 # personal index file
 twitch-index.json
+youtube-index.json
 
 # Data files
 dist/*
