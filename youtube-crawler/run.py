@@ -15,8 +15,6 @@ def Run(index_file = 'youtube-index.json',
         print("No index file")
         sys.exit(1)
 
- #   with open('dist/1811280330.json', encoding='utf-8') as f:
- #       a = json.load(f)
     ############################################################
     # Get current time
     t = time.strftime('%y%m%d%H%M')
@@ -27,7 +25,7 @@ def Run(index_file = 'youtube-index.json',
     
     output = {}
 
-    #output['Channels'] = crawler.Channels(targets)
+    output['Channels'] = crawler.Channels(targets)
     video_lists = crawler.SearchVideos(targets)
     output['Videos'] = crawler.Videos(targets, video_lists)
 
