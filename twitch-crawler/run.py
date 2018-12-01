@@ -26,30 +26,39 @@ def Run(index_file = 'twitch-index.json',
     with open(index['filters'], encoding='utf-8') as f:
         filters = json.load(f)
     
-    output = {}
-    output['users'] = users = crawler.Users(targets.values())
+    users = crawler.Users(targets.values())
 
     #############################################################
     # Collect data with 30 minute period
-    output['streams'] = crawler.Stream_by_User(users, filters['stream_by_user'])
-    output['live_streams'] = crawler.Live_Streams()
-    output['top_game'] = crawler.Top_Game()
-    output['stream_summary'] = crawler.Stream_Summary()
+    streams= crawler.Stream_by_User(users, filters['stream_by_user'])
+    live_streams = crawler.Live_Streams()
+    top_game = crawler.Top_Game()
+    stream_summary = crawler.Stream_Summary()
 
     #############################################################
     # Collect data with 1 day period
 
     if new_day :
-        output['channels'] = crawler.Channel_by_ID(users, filters['channel_by_id'])
-        output['follows'] = crawler.Follows(users)
-        output['teams'] = crawler.Teams(users)
-        output['videos'] = crawler.Videos(users)
+        channels = crawler.Channel_by_ID(users, filters['channel_by_id'])
+        follows = crawler.Follows(users)
+        teams = crawler.Teams(users)
+        videos = crawler.Videos(users)
     
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
     
+    for user, data in users.items():
+        if user in streams:
+            data['streams'] = streams[user]
+        
+        if new_day:
+            data['channels'] = channels[user]
+            data['follows'] = follows[user]
+            data['teams'] = teams[user]
+            data['videos'] = videos[user]
+            
     with open(out_dir + '/' + t + '.json', 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False)
+        json.dump(users, f, ensure_ascii=False)
 
 if __name__ == '__main__':
     Run()
