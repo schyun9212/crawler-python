@@ -27,7 +27,7 @@ def Run(index_file = 'twitch-index.json',
         filters = json.load(f)
     
     output = {}
-    output['users'] = users = crawler.Users(targets.values(), filters['users'])
+    output['users'] = users = crawler.Users(targets.values())
 
     #############################################################
     # Collect data with 30 minute period

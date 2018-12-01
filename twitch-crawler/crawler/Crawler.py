@@ -34,7 +34,7 @@ class Crawler:
     def Users(self, names,  filter = []):
         query = self._login(names)
         res = requests.get(self.base_url + '/users' + query, headers = self.headers).json()
-        return list(map(lambda x : { '_id' : x['_id'], 'logo' : x['logo'], 'display_name' : x['display_name']}, res['users']))
+        return  dict((k['display_name'], {'_id' : k['_id'], 'logo' : k['logo']}) for k in res['users'])
 
     def Channel_by_ID(self, users,  filter = []):
         channels = {}
