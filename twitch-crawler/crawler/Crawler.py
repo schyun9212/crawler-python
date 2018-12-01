@@ -23,28 +23,36 @@ class Crawler:
         for name in names:
             login += (name + ',')
         return login[:-1]
-    
-    def Users(self, names):
-        query = self._login(names)
-        res = requests.get(self.base_url + '/users' + query, headers = self.headers)
-        return res.json()['users']
 
-    def Channel_by_ID(self, users):
+
+    def _filter(self, data, keys):
+        filtered_data = data
+        for key in keys:
+            del filtered_data[key]
+        return filtered_data
+    
+    def Users(self, names,  filter = []):
+        query = self._login(names)
+        res = requests.get(self.base_url + '/users' + query, headers = self.headers).json()
+        return list(map(lambda x : { '_id' : x['_id'], 'logo' : x['logo'], 'display_name' : x['display_name']}, res['users']))
+
+    def Channel_by_ID(self, users,  filter = []):
         channels = {}
         for user in users:
-            res = requests.get(self.base_url + '/channels/' + user['_id'], headers = self.headers)
-            channel = res.json()
+            res = requests.get(self.base_url + '/channels/' + user['_id'], headers = self.headers).json()
+            channel = self._filter(res, filter)
             channels[user['display_name']] = channel
         return channels
 
     def Follows(self, users):
         follows = {}
         for user in users:
-            follow = {'_total' : 1}
+            follow = []
             offset = 0
-            while (follow['_total'] - offset) > 0:
-                res = requests.get(self.base_url + '/users/' + user['_id'] + '/follows/channels?limit=100' + '&offset=' + str(offset), headers = self.headers)
-                follow.update(res.json())
+            while True:
+                res = requests.get(self.base_url + '/users/' + user['_id'] + '/follows/channels?limit=100' + '&offset=' + str(offset), headers = self.headers).json()
+                if len(res['follows']) == 0: break
+                follow += list(map(lambda  x : x['channel']['display_name'], res['follows']))
                 offset += 100
             follows[user['display_name']] = follow
         return follows
@@ -52,51 +60,53 @@ class Crawler:
     def Teams(self, users):
         teams = {}
         for user in users:
-            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/teams', headers = self.headers)
-            team = res.json()
+            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/teams', headers = self.headers).json()
+            team = list(map(lambda  x : x['display_name'], res['teams']))
             teams[user['display_name']] = team
         return teams
 
-    def Subscribers(self, users):
+    # TODO : Not athorized
+    def Subscribers(self, users,  filter = []):
         auth_headers = {
-            'Client-ID' : client_id,
+            'Client-ID' : self.client_id,
             'Accept' : 'application/vnd.twitchtv.v5+json',
             'Authorization' : 'OAuth ' + self._oauth('channel_subscriptions') 
         }
         subscribers = {}
         for user in users:
-            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/subscriptions', headers = auth_headers)
-            subscriber = res.json()
+            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/subscriptions', headers = auth_headers).json()
+            subscriber = self._filter(res, filter)
             subscribers[user['display_name']] = subscriber
         return subscribers
     
-    def Videos(self, users):
+    def Videos(self, users,  filter = []):
         videos = {}
         for user in users:
-            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/videos', headers = self.headers)
-            video = res.json()['videos']
+            res = requests.get(self.base_url + '/channels/' + user['_id'] + '/videos?limit=20&sort=time', headers = self.headers).json()
+            video = list(map(lambda  x : { 'game' : x['game'], 'views' : x['views'] }, res['videos']))
             videos[user['display_name']] = video
         return videos
 
-    def Stream_by_User(self, users):
+    def Stream_by_User(self, users, filter = []):
         streams = {}
         for user in users:
-            res = requests.get(self.base_url + '/streams/' + user['_id'], headers = self.headers)
-            stream = res.json()['stream']
+            res = requests.get(self.base_url + '/streams/' + user['_id'], headers = self.headers).json()
+            if res['stream'] == None: continue
+            stream = self._filter(res['stream'], filter)
             streams[user['display_name']] = stream
         return streams
     
-    def Live_Streams(self):
-        res = requests.get(self.base_url + '/streams/' + '?language=ko&limit=100', headers = self.headers)
-        return res.json()
+    def Live_Streams(self,  filter = []):
+        res = requests.get(self.base_url + '/streams/' + '?language=ko&limit=100', headers = self.headers).json()
+        return self._filter(res, filter)
     
-    def Top_Game(self):
-        res = requests.get(self.base_url + '/games/top', headers = self.headers)
-        return res.json()
+    def Top_Game(self,  filter = []):
+        res = requests.get(self.base_url + '/games/top', headers = self.headers).json()
+        return self._filter(res, filter)
     
-    def Stream_Summary(self):
-        res = requests.get(self.base_url + '/streams/summary', headers = self.headers)
-        return res.json()
+    def Stream_Summary(self,  filter = []):
+        res = requests.get(self.base_url + '/streams/summary', headers = self.headers).json()
+        return self._filter(res, filter)
 
 ###########################################################################
 # How to use?

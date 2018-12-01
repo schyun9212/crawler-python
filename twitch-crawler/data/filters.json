@@ -1,0 +1,39 @@
+{
+    "users" : [
+        "bio",
+        "name",
+        "type",
+        "updated_at"
+    ],
+    "channel_by_id" : [
+        "_id",
+        "broadcaster_language",
+        "broadcaster_software",
+        "created_at",
+        "description",
+        "display_name",
+        "language",
+        "logo",
+        "mature",
+        "name",
+        "privacy_options_enabled",
+        "private_video",
+        "profile_banner",
+        "profile_banner_background_color",
+        "updated_at",
+        "url",
+        "video_banner"
+    ],
+    "stream_by_user" : [
+        "_id",
+        "average_fps",
+        "broadcast_platform",
+        "channel",
+        "community_id",
+        "community_ids",
+        "delay",
+        "is_playlist",
+        "preview",
+        "video_height"
+    ]
+}
