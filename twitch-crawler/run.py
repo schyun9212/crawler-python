@@ -61,6 +61,10 @@ def Run(index_file = 'twitch-index.json',
         if user in streams:
             data['streams'] = streams[user]
         
+        data['live_streams'] = live_streams
+        data['top_game'] = top_game
+        data['stream_summary'] = stream_summary
+
         if new_day:
             data['channels'] = channels[user]
             data['follows'] = follows[user]
