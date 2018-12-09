@@ -51,7 +51,7 @@ class Crawler:
             offset = 0
             while True:
                 res = requests.get(self.base_url + '/users/' + data['_id'] + '/follows/channels?limit=100' + '&offset=' + str(offset), headers = self.headers).json()
-                if len(res['follows']) == 0: break
+                if offset > res['_total'] : break
                 follow += list(map(lambda  x : x['channel']['display_name'], res['follows']))
                 offset += 100
             follows[user] = follow
