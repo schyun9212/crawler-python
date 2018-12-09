@@ -19,7 +19,7 @@ def Run(index_file = 'twitch-index.json',
     ############################################################
     # Get current time
     t = time.strftime('%y%m%d%H%M')
-    t = '0000000000'
+    
     new_day = int(t[-4:]) < 30 
 
     crawler = Crawler(client_id = client_id, client_secret = client_secret)
@@ -61,16 +61,17 @@ def Run(index_file = 'twitch-index.json',
     for user, data in users.items():
         if user in streams:
             data['streams'] = streams[user]
-        
-        data['live_streams'] = live_streams
-        data['top_game'] = top_game
-        data['stream_summary'] = stream_summary
 
         if new_day:
             data['channels'] = channels[user]
             data['follows'] = follows[user]
             data['teams'] = teams[user]
             #data['videos'] = videos[user]
+    
+            
+    users['live_streams'] = live_streams
+    users['top_game'] = top_game
+    users['stream_summary'] = stream_summary
             
     with open(out_dir + '/' + t + '.json', 'w', encoding='utf-8') as f:
         json.dump(users, f, ensure_ascii=False)
