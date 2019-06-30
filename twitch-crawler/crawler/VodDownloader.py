@@ -76,15 +76,17 @@ class VodDownloader:
 
     def _get_chunk(self, chunk_url):
         res = requests.get(chunk_url['url'])
-        return res.content
+        with open(os.path.join(self.temp_dir, '%d.ts' % chunk_url['index']), 'wb') as chunk:
+            chunk.write(res.content)
+            chunk.close()
 
     def _merge_chunks(self, user_id, video_id, number_of_chunks):
-        result = open(os.path.join(self.temp_dir, '%s_%s.mp4' % (user_id, video_id)), 'w+')
-        for i in range(0, number_of_chunks):
-            with open(os.path.join(self.temp_dir, '%d.ts' % i), 'r') as f:
-                result.write(f)
-                f.close()
-        print('A')
+        with open(os.path.join(self.out_dir, '%s_%s.mp4' % (user_id, video_id)), 'wb') as video:
+            for i in range(0, number_of_chunks):
+                with open(os.path.join(self.temp_dir, '%d.ts' % i), 'rb') as chunk:
+                    video.write(chunk.read())
+                    chunk.close()
+            video.close()
 
     def _download_video(self, user_id, video_id, video_source_url):
         res = requests.get(video_source_url).text
@@ -95,14 +97,12 @@ class VodDownloader:
         os.mkdir(self.temp_dir)
 
         thread_pool = ThreadPool(NUMBER_OF_THREADS)
-        results = thread_pool.map(self._get_chunk, chunk_urls)
+        thread_pool.map(self._get_chunk, chunk_urls)
         
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
-    
-        with open(os.path.join(self.out_dir, '%s_%s.mp4' % (user_id, video_id)), 'wb') as f:
-            f.write(b'\n'.join(results))
-        
+
+        self._merge_chunks(user_id, video_id, len(chunk_urls))
         shutil.rmtree(self.temp_dir)
 
     def Users(self, login_ids,  filter = []):
