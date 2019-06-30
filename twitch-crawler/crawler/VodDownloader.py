@@ -1,6 +1,9 @@
 import requests
 import re
-from threading import Thread
+import os
+import shutil
+import subprocess
+from multiprocessing.pool import ThreadPool
 
 ACCESS_TOKEN_URL = "https://api.twitch.tv/api/vods/%s/access_token"
 VIDEO_SOURCE_URL = "https://usher.ttvnw.net/vod/%s.m3u8?nauthsig=%s&nauth=%s&allow_source=true&player=twitchweb&allow_spectre=true&allow_audio_only=true"
@@ -30,13 +33,13 @@ def extract_parts(data, url):
     return result
 
 class VodDownloader:
-    def __init__(self, client_id, client_secret):
+    def __init__(self, client_id, out_dir = 'dist', number_of_threads = 10):
         self.base_url = 'https://api.twitch.tv/helix'
         self.client_id = client_id
-        self.client_secret = client_secret
-        self.headers = {
-            'Client-ID' : client_id
-        }
+        self.headers = { 'Client-ID' : client_id }
+        self.temp_dir = os.path.join(os.getcwd(), 'tmp')
+        self.out_dir = os.path.join(os.getcwd(), out_dir)
+        self.number_of_threads = number_of_threads
 
     def _create_login_query(self, login_ids):
         login_query = '?login='
@@ -65,21 +68,48 @@ class VodDownloader:
         chunk_urls = [None] * len(chunks)
         base_chunk_url = re.sub(r'(\w|-)+\.m3u8', '', video_source_url)
         for i, chunk in enumerate(chunks):
-            chunk_urls[i] = base_chunk_url + chunk
+            chunk_urls[i] = {
+                'url': base_chunk_url + chunk,
+                'index': i
+            }
         return chunk_urls
 
     def _get_chunk(self, chunk_url):
-        pass
+        res = requests.get(chunk_url['url'])
+        return res.content
 
-    def _download_video(self, video_source_url):
+    def _merge_chunks(self, user_id, video_id, number_of_chunks):
+        result = open(os.path.join(self.temp_dir, '%s_%s.mp4' % (user_id, video_id)), 'w+')
+        for i in range(0, number_of_chunks):
+            with open(os.path.join(self.temp_dir, '%d.ts' % i), 'r') as f:
+                result.write(f)
+                f.close()
+        print('A')
+
+    def _download_video(self, user_id, video_id, video_source_url):
         res = requests.get(video_source_url).text
         chunk_urls = self._get_chunk_urls(res, video_source_url)
+
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+        os.mkdir(self.temp_dir)
+
+        thread_pool = ThreadPool(NUMBER_OF_THREADS)
+        results = thread_pool.map(self._get_chunk, chunk_urls)
+        
+        if not os.path.exists(self.out_dir):
+            os.mkdir(self.out_dir)
+    
+        with open(os.path.join(self.out_dir, '%s_%s.mp4' % (user_id, video_id)), 'wb') as f:
+            f.write(b'\n'.join(results))
+        
+        shutil.rmtree(self.temp_dir)
 
     def Users(self, login_ids,  filter = []):
         login_query = self._create_login_query(login_ids)
         url = self._create_url('users', login_query)
         res = requests.get(url, headers = self.headers).json()
-        return  dict((k['login'], {'id' : k['id'], 'display_name' : k['display_name']}) for k in res['data'])
+        return  dict((data['login'], {'id' : data['id'], 'display_name' : data['display_name']}) for data in res['data'])
 
     def Videos(self, users,  filter = []):
         videos = {}
@@ -99,14 +129,14 @@ class VodDownloader:
         users = self.Users(['nanayango3o'])
         videos = self.Videos(users)
         resolution_regex = re.compile(r'(([0-9]+p[0-9]+)|chunked|audio_only)')
-        access_token = self._get_access_token(videos['nanayango3o'][0]['id'])
-        video_source_url = self._get_video_source_url(videos['nanayango3o'][0]['id'], access_token, option = '720p60')
+        access_token = self._get_access_token(videos['nanayango3o'][3]['id'])
+        video_source_url = self._get_video_source_url(videos['nanayango3o'][3]['id'], access_token, option = '160p30')
         
-        self._download_video(video_source_url)
-        print('A')
+        self._download_video('nanayango3o', videos['nanayango3o'][3]['id'], video_source_url)
 
 test = VodDownloader(
     client_id = '',
-    client_secret = ''
+    out_dir = 'dist',
+    number_of_threads = 10,
 )
 test.Test()
