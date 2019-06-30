@@ -119,3 +119,8 @@ youtube-index.json
 
 # Data files
 dist/*
+
+# Mac
+.DS_Store
+# VSCode configure
+.vscode
