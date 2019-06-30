@@ -8,29 +8,15 @@ from multiprocessing.pool import ThreadPool
 ACCESS_TOKEN_URL = "https://api.twitch.tv/api/vods/%s/access_token"
 VIDEO_SOURCE_URL = "https://usher.ttvnw.net/vod/%s.m3u8?nauthsig=%s&nauth=%s&allow_source=true&player=twitchweb&allow_spectre=true&allow_audio_only=true"
 
-video_options = [
-    '160p30',
-    '360p30',
-    '480p30',
-    '720p30',
-    '720p60',
-    'audio_only',
-    'chunked'
-]
-
-NUMBER_OF_THREADS = 10
-
-def extract_parts(data, url):
-    lines = data.split("\n")
-    url_splited = url.split('/')
-    url = '/'.join(url_splited[:-1]) + '/'
-    i = 0
-    result = []
-    while i < len(lines):
-        if lines[i][:7] == '#EXTINF':
-            result.append(url + lines[i + 1])
-        i += 1
-    return result
+video_options = {
+    '160p30' : True,
+    '360p30' : True,
+    '480p30' : True,
+    '720p30' : True,
+    '720p60' : True,
+    'audio_only' : True,
+    'chunked' : True
+}
 
 class VodDownloader:
     def __init__(self, client_id, out_dir = 'dist', number_of_threads = 10):
@@ -41,15 +27,9 @@ class VodDownloader:
         self.out_dir = os.path.join(os.getcwd(), out_dir)
         self.number_of_threads = number_of_threads
 
-    def _create_login_query(self, login_ids):
-        login_query = '?login='
-        for login_id in login_ids:
-            login_query += (login_id + ',')
-        return login_query[:-1]
-
     def _create_url(self, query_target, query):
         return self.base_url + '/' + query_target + query
-    
+
     def _get_access_token(self,  video_id):
         url = ACCESS_TOKEN_URL % video_id
         return requests.get(url, headers = self.headers).json()
@@ -80,31 +60,53 @@ class VodDownloader:
             chunk.write(res.content)
             chunk.close()
 
-    def _merge_chunks(self, user_id, video_id, number_of_chunks):
-        with open(os.path.join(self.out_dir, '%s_%s.mp4' % (user_id, video_id)), 'wb') as video:
+    def _merge_chunks(self, video_info, number_of_chunks):
+        with open(os.path.join(self.out_dir,\
+            '%s_%s_%s.mp4' % (video_info['user_name'],\
+            video_info['created_at'],\
+            video_info['id'])), 'wb') as video:
+
             for i in range(0, number_of_chunks):
                 with open(os.path.join(self.temp_dir, '%d.ts' % i), 'rb') as chunk:
                     video.write(chunk.read())
                     chunk.close()
             video.close()
 
-    def _download_video(self, user_id, video_id, video_source_url):
+    def _download_video(self, video_id, video_source_url):
+        video_info = self._get_video_info(video_id)
+
         res = requests.get(video_source_url).text
         chunk_urls = self._get_chunk_urls(res, video_source_url)
 
-        if os.path.exists(self.temp_dir):
-            shutil.rmtree(self.temp_dir)
         os.mkdir(self.temp_dir)
 
-        thread_pool = ThreadPool(NUMBER_OF_THREADS)
+        thread_pool = ThreadPool(self.number_of_threads)
         thread_pool.map(self._get_chunk, chunk_urls)
         
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
 
-        self._merge_chunks(user_id, video_id, len(chunk_urls))
-        shutil.rmtree(self.temp_dir)
+        return self._merge_chunks(video_info, len(chunk_urls))
 
+    def _get_video_info(self, video_id):
+        return requests.get(self._create_url('videos', '?id=%s' % video_id), headers = self.headers).json()['data'][0]
+
+    def Download(self, video_id, option = '160p30'):
+        access_token = self._get_access_token(video_id)
+        video_source_url = self._get_video_source_url(video_id, access_token, option = option)
+        file_name = self._download_video(video_id, video_source_url)
+        print('Saved Vod(%s) as %s', (video_id, file_name))
+
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+    
+    '''
+    def _create_login_query(self, login_ids):
+        login_query = '?login='
+        for login_id in login_ids:
+            login_query += (login_id + ',')
+        return login_query[:-1]
+    
     def Users(self, login_ids,  filter = []):
         login_query = self._create_login_query(login_ids)
         url = self._create_url('users', login_query)
@@ -124,19 +126,4 @@ class VodDownloader:
                 }, res['data']))
             videos[user] = video
         return videos
-
-    def Test(self):
-        users = self.Users(['nanayango3o'])
-        videos = self.Videos(users)
-        resolution_regex = re.compile(r'(([0-9]+p[0-9]+)|chunked|audio_only)')
-        access_token = self._get_access_token(videos['nanayango3o'][3]['id'])
-        video_source_url = self._get_video_source_url(videos['nanayango3o'][3]['id'], access_token, option = '160p30')
-        
-        self._download_video('nanayango3o', videos['nanayango3o'][3]['id'], video_source_url)
-
-test = VodDownloader(
-    client_id = '',
-    out_dir = 'dist',
-    number_of_threads = 10,
-)
-test.Test()
+    '''
