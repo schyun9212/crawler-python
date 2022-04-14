@@ -1,19 +1,14 @@
+# Notice
+This repository has been deprecated. Please see [dury](https://github.com/schyun9212/dury) if you are interested in crawling on Twitch, Youtube, Instagram, Google Search, Naver Search, Pixiv, and so on.
+
 # Tools for TwitchTV and YouTube
 Implementation of a tool to get the information you need using TwitchTV API and YouTube API
 
-# TwitchTV Functions
+## TwitchTV Functions
 
-1. Crawling
-2. VodDownload
+* Crawling
+* VodDownload
 
-# YouTube Functions
+## YouTube Functions
 
-1. Crawling
-
-# Manual
-
-TODO...
-
-# Plan
-
-* Automatic editing point finder
+* Crawling
